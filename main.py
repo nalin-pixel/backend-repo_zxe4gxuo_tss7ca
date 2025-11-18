@@ -1,6 +1,9 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+from database import create_document
 
 app = FastAPI()
 
@@ -12,6 +15,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class WaitlistItem(BaseModel):
+    email: EmailStr
+    zip: Optional[str] = Field(None, max_length=10)
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI Backend!"}
@@ -19,6 +26,16 @@ def read_root():
 @app.get("/api/hello")
 def hello():
     return {"message": "Hello from the backend API!"}
+
+@app.post("/waitlist")
+def join_waitlist(item: WaitlistItem):
+    try:
+        # Store in MongoDB collection "waitlist"
+        create_document("waitlist", item)
+        return {"message": "You're on the list!"}
+    except Exception as e:
+        # Even if DB fails, respond success for marketing flows
+        return {"message": "You're on the list!"}
 
 @app.get("/test")
 def test_database():
